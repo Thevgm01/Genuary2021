@@ -1,6 +1,8 @@
-PGraphics image;
+PGraphics graphic;
 PVector imageOffset;
 PVector lineA, lineB;
+
+PImage rainbow;
 
 boolean mouseDown = false;
 PVector mouseStart, mouseEnd;
@@ -27,13 +29,16 @@ void setup() {
   colorMode(HSB);
 
   int squareSize = 100;
-  image = createGraphics(5000, 5000);
-  imageOffset = new PVector(image.width/2, image.height/2);
-  image.beginDraw();
-  image.fill(color(lastHue, sat, brt));
-  image.noStroke();
-  image.rect(imageOffset.x - squareSize/2, imageOffset.y - squareSize/2, squareSize, squareSize);
-  image.endDraw();
+  graphic = createGraphics(10000, 10000);
+  imageOffset = new PVector(graphic.width/2, graphic.height/2);
+  graphic.beginDraw();
+  graphic.fill(color(lastHue, sat, brt));
+  graphic.noStroke();
+  graphic.rect(imageOffset.x - squareSize/2, imageOffset.y - squareSize/2, squareSize, squareSize);
+  graphic.endDraw();
+  
+  rainbow = loadImage("rainbow.jpg");
+  rainbow.resize(width, height);
 }
 
 PVector getMousePos() {
@@ -59,14 +64,21 @@ void mouseReleased() {
 }
 
 void draw() {
-  background(backgroundColor);
+  //background(backgroundColor);
+  background(rainbow);
+  fill(0, 127);
+  noStroke();
+  rect(0, 0, width, height);
 
-  globalScale = 1 / (frameCount * 0.001f + 1);
+  //globalScale = 1 / (frameCount * 0.001f + 1);
+  if(globalScale * graphic.width > width) {
+    globalScale *= 0.999f;
+  }
 
   imageMode(CENTER);
   translate(width/2, height/2);
   scale(globalScale);
-  image(image, 0, 0);
+  image(graphic, 0, 0);
 
   noFill();
   stroke(uiColor);
@@ -94,9 +106,9 @@ void draw() {
       PVector normal = new PVector(-slopeY, slopeX).setMag(50 * reflectDirection);
       line(midpoint.x, midpoint.y, midpoint.x + normal.x, midpoint.y + normal.y);
     }
-    //reflect();
-    //mouseDown = false; 
   }
+  
+  saveFrame("frames/" + frameCount);
 }
 
 int getSide(PVector A, PVector B, float x, float y) {
@@ -123,14 +135,14 @@ void reflect() {
   PVector shiftedLineB = PVector.add(lineB, lineShift);
   
   // Keep track of where the pixels started and ended to make copying easier
-  int highestX = 0, highestY = 0, lowestX = image.width, lowestY = image.height;
+  int highestX = 0, highestY = 0, lowestX = graphic.width, lowestY = graphic.height;
   
-  image.loadPixels();
+  graphic.loadPixels();
   color empty = color(0, 0);
-  for(int i = 0; i < image.pixels.length; ++i) {
-    if(getAlpha(image.pixels[i]) > 0) { // If the pixel is non-transparent
-      int x = i % image.width,
-          y = i / image.width;
+  for(int i = 0; i < graphic.pixels.length; ++i) {
+    if(getAlpha(graphic.pixels[i]) > 0) { // If the pixel is non-transparent
+      int x = i % graphic.width,
+          y = i / graphic.width;
     
       if(x > highestX) highestX = x;
       if(x < lowestX) lowestX = x;
@@ -138,7 +150,7 @@ void reflect() {
       if(y < lowestY) lowestY = y;
           
       if(getSide(shiftedLineA, shiftedLineB, x - imageOffset.x, y - imageOffset.y) == reflectDirection) {
-        image.pixels[i] = empty;
+        graphic.pixels[i] = empty;
       }
     }
   }
@@ -168,7 +180,7 @@ void reflect() {
     }
   }
   */
-  image.updatePixels();
+  graphic.updatePixels();
 
   // I can't for the LIFE of me figure out why this doesn't work
   // It works perfectly when I grab the entire screen, or even a defined area
@@ -193,7 +205,7 @@ void reflect() {
   if(highestX - imageOffset.x > largestX) largestX = highestX - imageOffset.x;
   float largestY = imageOffset.y - lowestY;
   if(highestY - imageOffset.y > largestY) largestY = highestY - imageOffset.y;
-  PImage reflection = image.get(
+  PImage reflection = graphic.get(
     floor(imageOffset.x - largestX), 
     floor(imageOffset.y - largestY), 
     ceil(largestX * 2), 
@@ -228,19 +240,19 @@ void reflect() {
       break;
   }
 
-  image.imageMode(CENTER);
+  graphic.imageMode(CENTER);
 
-  image.beginDraw();
-  image.pushMatrix();
-  image.translate(imageOffset.x, imageOffset.y);
-  image.translate(midpoint.x, midpoint.y);
-  image.rotate(angle);
-  image.scale(1, -1);
-  image.rotate(-angle);
-  image.translate(-midpoint.x, -midpoint.y);
-  image.image(reflection, 0, 0);
-  image.popMatrix();
-  image.endDraw();
+  graphic.beginDraw();
+  graphic.pushMatrix();
+  graphic.translate(imageOffset.x, imageOffset.y);
+  graphic.translate(midpoint.x, midpoint.y);
+  graphic.rotate(angle);
+  graphic.scale(1, -1);
+  graphic.rotate(-angle);
+  graphic.translate(-midpoint.x, -midpoint.y);
+  graphic.image(reflection, 0, 0);
+  graphic.popMatrix();
+  graphic.endDraw();
 }
 
 int getAlpha(color c) {

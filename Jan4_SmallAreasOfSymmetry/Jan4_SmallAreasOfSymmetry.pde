@@ -1,45 +1,30 @@
-PImage img;
+PGraphics image;
 PVector lineA, lineB;
 
 float speedMult = 1;
 
+boolean mouseDown = false;
+
 void setup() {
   size(400, 400); 
   
-  int startSquareSize = 100;
-  img = createImage(400, 400, ARGB);
-  color whiteColor = color(255);
-  PImage white = createImage(startSquareSize, startSquareSize, ARGB);
-  for(int i = 0; i < white.pixels.length; ++i)
-    white.pixels[i] = whiteColor;
-  img.set(img.width/2 - white.width/2, img.width/2 - white.height/2, white);
+  int squareSize = 100;
+  image = createGraphics(5000, 5000);
+  image.beginDraw();
+  image.fill(255);
+  image.noStroke();
+  image.rect(image.width/2 - squareSize/2, image.height/2 - squareSize/2, squareSize, squareSize);
+  image.endDraw();
+  
+  imageMode(CENTER);
 }
 
-void mousePressed() {
-  PVector midpoint = lineA.add(lineB).div(2);
-  float angle = atan2(lineB.y, lineB.x);
-  println(angle);
-  float cosAngle = cos(angle), sinAngle = sin(angle);
-  
-  color white = color(255, 255);
-  color empty = color(0, 0);
-  for(int i = 0; i < img.pixels.length; ++i) {
-    if(img.pixels[i] != empty) {
-      if(getSide(lineA, lineB, new PVector(i % img.width, i / img.width)) > 0) {
-        //img.pixels[i] = white;
-        float x = i % img.width - midpoint.x, y = i / img.width - midpoint.y;
-        float newX = x * cosAngle - y * sinAngle, newY = x * sinAngle + y * cosAngle;
-        newY = -newY;
-        x = newX * -cosAngle - newY * -sinAngle + midpoint.x;
-        y = newX * -sinAngle + newY * -cosAngle + midpoint.y;
-        img.set(round(x), round(y), white);
-        //img.pixels[round(newY * img.width + newX)] = white;
-      } else {
-        //img.pixels[i] = empty; 
-      }
-    }
-  }
-  img.updatePixels();
+void mousePressed() {  
+  mouseDown = true;
+}
+
+void mouseReleased() {
+  mouseDown = false; 
 }
 
 void keyPressed() {
@@ -51,10 +36,14 @@ void keyPressed() {
 
 void draw() {
   background(127);
-    
-  //translate(width/2, height/2);
-  //translate(-sym.width/2, -sym.height/2); // Both zero?
-    
+
+  pushMatrix();
+  translate(width/2, height/2);
+  float s = frameCount * 0.001f;
+  scale(1 / (s + 1));
+  image(image, 0, 0);
+  popMatrix();
+
   float bobSpeed = 2f * speedMult;
   float bobScale = 100f;
   float yIntercept = sin(frameCount / (100f / bobSpeed)) * bobScale;
@@ -64,7 +53,10 @@ void draw() {
   lineA = new PVector(width/2 + -scale * slopeX, height/2 + -scale * slopeY + yIntercept);
   lineB = new PVector(width/2 + scale * slopeX,  height/2 + scale * slopeY + yIntercept);
 
-  image(img, 0, 0);
+  if(mouseDown) {
+    reflect();
+    mouseDown = false; 
+  }
   
   stroke(0);
   strokeWeight(2f);
@@ -79,4 +71,33 @@ int sign(float num) {
   if(num < 0) return -1;
   if(num > 0) return 1;
   return 0;
+}
+
+void reflect() {
+  color empty = color(0, 0);
+  PVector offset = new PVector(width/2 - image.width/2, height/2 - image.height/2);
+  for(int i = 0; i < image.pixels.length; ++i) {
+    if(image.pixels[i] != empty) {
+      if(getSide(lineA, lineB, new PVector(i % image.width + offset.x, i / image.width + offset.y)) > 0) {
+        image.pixels[i] = empty;
+      }
+    }
+  }
+  image.updatePixels();
+
+  PImage reflection = image.copy();
+  
+  PVector midpoint = lineA.add(lineB).div(2).sub(offset);
+  float angle = atan2(lineB.y, lineB.x);
+  
+  image.beginDraw();
+  image.pushMatrix();
+  image.translate(midpoint.x, midpoint.y);
+  image.rotate(angle);
+  image.scale(1, -1);
+  image.rotate(-angle);
+  image.translate(-midpoint.x, -midpoint.y);
+  image.image(reflection, 0, 0);
+  image.popMatrix();
+  image.endDraw();
 }

@@ -6,7 +6,7 @@ float speedMult = 1;
 boolean mouseDown = false;
 
 void setup() {
-  size(400, 400); 
+  size(600, 600); 
   
   int squareSize = 100;
   image = createGraphics(5000, 5000);
@@ -17,6 +17,7 @@ void setup() {
   image.endDraw();
   
   imageMode(CENTER);
+  image.imageMode(CENTER);
 }
 
 void mousePressed() {  
@@ -37,21 +38,21 @@ void keyPressed() {
 void draw() {
   background(127);
 
-  pushMatrix();
+  float s = 1 / (frameCount * 0.001f + 1);
+
   translate(width/2, height/2);
-  float s = frameCount * 0.001f;
-  scale(1 / (s + 1));
+  scale(s);
   image(image, 0, 0);
-  popMatrix();
 
   float bobSpeed = 2f * speedMult;
-  float bobScale = 100f;
+  float bobScale = 100f / s;
   float yIntercept = sin(frameCount / (100f / bobSpeed)) * bobScale;
   float slopeX = mouseX - width/2;
   float slopeY = mouseY - height/2;
   float scale = 1000f;
-  lineA = new PVector(width/2 + -scale * slopeX, height/2 + -scale * slopeY + yIntercept);
-  lineB = new PVector(width/2 + scale * slopeX,  height/2 + scale * slopeY + yIntercept);
+  lineA = new PVector(-scale * slopeX, -scale * slopeY + yIntercept);
+  lineB = new PVector( scale * slopeX,  scale * slopeY + yIntercept);
+  PVector normal = new PVector(-slopeY, slopeX).setMag(50);
 
   if(mouseDown) {
     reflect();
@@ -59,8 +60,9 @@ void draw() {
   }
   
   stroke(0);
-  strokeWeight(2f);
+  strokeWeight(2f / s);
   line(lineA.x, lineA.y, lineB.x, lineB.y);
+  line(0, yIntercept, normal.x, normal.y + yIntercept);
 }
 
 int getSide(PVector A, PVector B, PVector point) {
@@ -74,25 +76,36 @@ int sign(float num) {
 }
 
 void reflect() {
+  int highestX = 0, highestY = 0, lowestX = image.width, lowestY = image.height;
+  
   color empty = color(0, 0);
-  PVector offset = new PVector(width/2 - image.width/2, height/2 - image.height/2);
+  PVector offset = new PVector(image.width/2, image.height/2);
   for(int i = 0; i < image.pixels.length; ++i) {
-    if(image.pixels[i] != empty) {
-      if(getSide(lineA, lineB, new PVector(i % image.width + offset.x, i / image.width + offset.y)) > 0) {
+    if(((image.pixels[i] >> 24) & 0xff) > 0) { // If the pixel is non-transparent
+      int x = i % image.width,
+          y = i / image.width;
+          
+      if(x > highestX) highestX = x;
+      if(x < lowestX) lowestX = x;
+      if(y > highestY) highestY = y;
+      if(y < lowestY) lowestY = y;
+          
+      if(getSide(lineA, lineB, new PVector(x - offset.x, y - offset.y)) > 0) {
         image.pixels[i] = empty;
       }
     }
   }
   image.updatePixels();
 
-  PImage reflection = image.copy();
+  PImage reflection = image.get(lowestX, lowestY, highestX - lowestX, highestY - lowestY);
+  //PImage reflection = image.get();
   
-  PVector midpoint = lineA.add(lineB).div(2).sub(offset);
+  PVector midpoint = lineA.add(lineB).div(2f);
   float angle = atan2(lineB.y, lineB.x);
   
   image.beginDraw();
   image.pushMatrix();
-  image.translate(midpoint.x, midpoint.y);
+  image.translate(image.width/2 + midpoint.x, image.height/2 + midpoint.y);
   image.rotate(angle);
   image.scale(1, -1);
   image.rotate(-angle);

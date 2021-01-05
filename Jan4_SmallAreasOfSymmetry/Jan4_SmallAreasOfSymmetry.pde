@@ -2,9 +2,11 @@ PGraphics image;
 PVector imageOffset;
 PVector lineA, lineB;
 
-float speedMult = 1;
-
 boolean mouseDown = false;
+PVector mouseStart, mouseEnd;
+int reflectDirection = 1;
+
+float globalScale = 1;
 
 enum ColorShift {
   STATIC,
@@ -15,7 +17,10 @@ ColorShift colorShift = ColorShift.PER_PIXEL;
 
 int lastHue = 0;
 int hueChange = 20;
-int sat = 100, brt = 255;
+int sat = 150, brt = 255;
+
+color backgroundColor = color(127);
+color uiColor = color(0);
 
 void setup() {
   size(600, 600); 
@@ -31,50 +36,67 @@ void setup() {
   image.endDraw();
 }
 
-void mousePressed() {  
+PVector getMousePos() {
+  return new PVector(mouseX - width/2, mouseY - height/2).div(globalScale);
+}
+
+void mousePressed() {
+  if(mouseButton == LEFT) {
   mouseDown = true;
+  mouseStart = getMousePos();
+  } else if(mouseButton == RIGHT) {
+    reflectDirection = -reflectDirection;
+  }
 }
 
 void mouseReleased() {
-  mouseDown = false; 
-}
-
-void keyPressed() {
-  if(key == ' ') {
-    if(speedMult > 0) speedMult = 0;
-    else speedMult = 1;
+  if(mouseButton == LEFT) {
+    mouseDown = false;
+    if(lineA != null && lineB != null) {
+      reflect(); 
+    }
   }
 }
 
 void draw() {
-  background(127);
+  background(backgroundColor);
 
-  float s = 1 / (frameCount * 0.001f + 1);
+  globalScale = 1 / (frameCount * 0.001f + 1);
 
   imageMode(CENTER);
   translate(width/2, height/2);
-  scale(s);
+  scale(globalScale);
   image(image, 0, 0);
 
-  float bobSpeed = 2f * speedMult;
-  float bobScale = 100f / s;
-  float yIntercept = sin(frameCount / (100f / bobSpeed)) * bobScale;
-  float slopeX = mouseX - width/2;
-  float slopeY = mouseY - height/2;
-  float scale = 1000f;
-  lineA = new PVector(-scale * slopeX, -scale * slopeY + yIntercept);
-  lineB = new PVector( scale * slopeX,  scale * slopeY + yIntercept);
-  PVector normal = new PVector(-slopeY, slopeX).setMag(50);
+  noFill();
+  stroke(uiColor);
+  strokeWeight(2f / globalScale);
+  float mouseRadius = 25 / globalScale;
 
   if(mouseDown) {
-    reflect();
-    mouseDown = false; 
+    mouseEnd = getMousePos();
+    
+    circle(mouseStart.x, mouseStart.y, mouseRadius * 2);
+    
+    if(PVector.dist(mouseStart, mouseEnd) < mouseRadius) {
+      lineA = null;
+      lineB = null;
+      line(mouseStart.x, mouseStart.y, mouseEnd.x, mouseEnd.y);
+    } else {
+      PVector midpoint = PVector.add(mouseStart, mouseEnd).div(2);
+      float slopeX = mouseEnd.x - mouseStart.x;
+      float slopeY = mouseEnd.y - mouseStart.y;
+      float scale = 1000f;
+      lineA = new PVector(-scale * slopeX, -scale * slopeY).add(midpoint);
+      lineB = new PVector( scale * slopeX,  scale * slopeY).add(midpoint);      
+      line(lineA.x, lineA.y, lineB.x, lineB.y);
+      
+      PVector normal = new PVector(-slopeY, slopeX).setMag(50 * reflectDirection);
+      line(midpoint.x, midpoint.y, midpoint.x + normal.x, midpoint.y + normal.y);
+    }
+    //reflect();
+    //mouseDown = false; 
   }
-  
-  stroke(0);
-  strokeWeight(2f / s);
-  line(lineA.x, lineA.y, lineB.x, lineB.y);
-  line(0, yIntercept, normal.x, normal.y + yIntercept);
 }
 
 int getSide(PVector A, PVector B, float x, float y) {
@@ -96,7 +118,7 @@ void reflect() {
 
   // Shift the line that determines where pixels get cut off
   // to avoid the ugly seam that sometimes appears
-  PVector lineShift = new PVector(-sin(angle), cos(angle)).mult(2);
+  PVector lineShift = new PVector(-sin(angle), cos(angle)).mult(2 * reflectDirection);
   PVector shiftedLineA = PVector.add(lineA, lineShift);
   PVector shiftedLineB = PVector.add(lineB, lineShift);
   
@@ -115,7 +137,7 @@ void reflect() {
       if(y > highestY) highestY = y;
       if(y < lowestY) lowestY = y;
           
-      if(getSide(shiftedLineA, shiftedLineB, x - imageOffset.x, y - imageOffset.y) > 0) {
+      if(getSide(shiftedLineA, shiftedLineB, x - imageOffset.x, y - imageOffset.y) == reflectDirection) {
         image.pixels[i] = empty;
       }
     }

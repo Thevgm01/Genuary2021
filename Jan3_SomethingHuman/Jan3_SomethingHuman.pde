@@ -114,8 +114,10 @@ void draw() {
   float noiseVal = frameCount / 50f;
   float noiseScale = 10f;
   
-  translate(width/2, 0);
-  textAlign(CENTER, TOP);
+  //textAlign(CENTER, TOP);
+  //translate(width/2, 0);
+  textAlign(LEFT, TOP);
+  translate(10, 0);
   textSize(50);
   text(
     splitLines(name) + carat, 
@@ -141,6 +143,8 @@ void draw() {
     
   if(frameCount % 2 == 0) 
     ++sentenceReveal;
+    
+  saveFrame("frames/" + frameCount);
 }
 
 String getHiddenText(String input, int len) {

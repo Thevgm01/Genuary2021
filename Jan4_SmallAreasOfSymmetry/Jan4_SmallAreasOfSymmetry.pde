@@ -103,12 +103,12 @@ void draw() {
       lineB = new PVector( scale * slopeX,  scale * slopeY).add(midpoint);      
       line(lineA.x, lineA.y, lineB.x, lineB.y);
       
-      PVector normal = new PVector(-slopeY, slopeX).setMag(50 * reflectDirection);
+      PVector normal = new PVector(-slopeY, slopeX).setMag(20 * reflectDirection / globalScale);
       line(midpoint.x, midpoint.y, midpoint.x + normal.x, midpoint.y + normal.y);
     }
   }
   
-  saveFrame("frames/" + frameCount);
+  //saveFrame("frames/" + frameCount);
 }
 
 int getSide(PVector A, PVector B, float x, float y) {

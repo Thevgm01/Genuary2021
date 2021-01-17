@@ -37,7 +37,7 @@ void draw() {
   start.draw();
   popMatrix();
   
-  saveFrame("frames/" + frameCount);
+  //saveFrame("frames/" + frameCount);
 }
 
 void keyPressed() {
